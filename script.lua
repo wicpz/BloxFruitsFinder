@@ -4,7 +4,7 @@
 
 --// AUTO EXECUTE ON TELEPORT
 if queue_on_teleport then
-    queue_on_teleport(game:HttpGet("PASTE_RAW_SCRIPT_URL_HERE"))
+    queue_on_teleport(game:HttpGet("https://raw.githubusercontent.com/wicpz/BloxFruitsFinder/main/script.lua"))
 end
 
 --// GLOBAL CACHE (ANTI-DUPLICATE)
