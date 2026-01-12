@@ -1,16 +1,17 @@
 --// ======================================================
---// BLOX FRUITS EVENT FINDER (ALL-IN-ONE)
+--// BLOX FRUITS EVENT FINDER (FIXED + SMART HOP)
 --// ======================================================
 
 --// AUTO EXECUTE ON TELEPORT
 if queue_on_teleport then
-    queue_on_teleport(game:HttpGet("https://raw.githubusercontent.com/wicpz/BloxFruitsFinder/main/script.lua"))
+    queue_on_teleport(game:HttpGet(
+        "https://raw.githubusercontent.com/wicpz/BloxFruitsFinder/main/script.lua"
+    ))
 end
 
---// GLOBAL CACHE (ANTI-DUPLICATE)
-getgenv().ServerCache = getgenv().ServerCache or {
-    Sent = {}
-}
+--// GLOBAL CACHES
+getgenv().ServerCache = getgenv().ServerCache or { Sent = {} }
+getgenv().CheckedServers = getgenv().CheckedServers or {}
 
 --// SERVICES
 local Players = game:GetService("Players")
@@ -22,15 +23,17 @@ local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 
 --// CONFIG
-local WEBHOOK_URL = "https://discord.com/api/webhooks/1459982301449552015/kjAvqXuGsjwL4WeH8vujJ3tN1AqLFWoB3718qtQhA6HvvuHJ3TmSIlogV-HIMfsfYlKT"
-
+local WEBHOOK_URL = "PASTE_YOUR_WEBHOOK_HERE"
 local AUTO_HOP = true
-local HOP_DELAY = 15 -- seconds
+local HOP_DELAY = 15
 
 local PLACE_ID = game.PlaceId
 local JOB_ID = game.JobId
 
 local FoundSomething = false
+
+-- Mark current server as checked
+getgenv().CheckedServers[JOB_ID] = true
 
 --// ======================================================
 --// AFK PROTECTION
@@ -42,13 +45,18 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 --// ======================================================
---// WEBHOOK (ANTI-SPAM)
+--// UTIL
 --// ======================================================
-local function sendWebhook(eventName, info)
+local function getPlayerCount()
+    return tostring(#Players:GetPlayers())
+end
+
+--// ======================================================
+--// WEBHOOK (ANTI-DUPLICATE)
+--// ======================================================
+local function sendWebhook(eventName)
     local key = JOB_ID .. "_" .. eventName
-    if getgenv().ServerCache.Sent[key] then
-        return
-    end
+    if getgenv().ServerCache.Sent[key] then return end
 
     getgenv().ServerCache.Sent[key] = true
     FoundSomething = true
@@ -60,12 +68,10 @@ local function sendWebhook(eventName, info)
             color = 16776960,
             fields = {
                 { name = "Event", value = eventName, inline = true },
-                { name = "JobId", value = "`" .. JOB_ID .. "`", inline = false },
-                { name = "Info", value = info or "N/A", inline = false }
+                { name = "Players", value = getPlayerCount(), inline = true },
+                { name = "JobId", value = "`" .. JOB_ID .. "`", inline = false }
             },
-            footer = {
-                text = "Blox Fruits Server Finder"
-            }
+            footer = { text = "Blox Fruits Server Finder" }
         }}
     }
 
@@ -80,18 +86,14 @@ end
 --// ======================================================
 --// DETECTIONS
 --// ======================================================
-
--- Full Moon
 local function checkFullMoon()
     if Lighting:GetAttribute("MoonPhase") == "FullMoon" then
-        sendWebhook("Full Moon", "Moon phase is full")
+        sendWebhook("Full Moon")
     end
 end
 
--- Islands
 local function checkIslands(obj)
     local name = obj.Name:lower()
-
     if name:find("mirage") then
         sendWebhook("Mirage Island")
     elseif name:find("kitsune") then
@@ -101,10 +103,9 @@ local function checkIslands(obj)
     end
 end
 
--- Legendary Sword Dealer
 local function checkSwordDealer()
     if workspace:FindFirstChild("NPCs") then
-        for _, npc in pairs(workspace.NPCs:GetChildren()) do
+        for _, npc in ipairs(workspace.NPCs:GetChildren()) do
             if npc.Name == "LegendarySwordDealer" then
                 sendWebhook("Legendary Sword Dealer")
             end
@@ -118,12 +119,12 @@ end
 checkFullMoon()
 checkSwordDealer()
 
-for _, v in pairs(workspace:GetDescendants()) do
+for _, v in ipairs(workspace:GetDescendants()) do
     checkIslands(v)
 end
 
 --// ======================================================
---// LIVE LISTENERS (NO LOOPS)
+--// LIVE LISTENERS
 --// ======================================================
 workspace.DescendantAdded:Connect(checkIslands)
 
@@ -134,11 +135,35 @@ Lighting.AttributeChanged:Connect(function(attr)
 end)
 
 --// ======================================================
---// AUTO SERVER HOP
+--// SMART SERVER HOP (NO REJOIN)
 --// ======================================================
 local function hopServer()
-    if AUTO_HOP and not FoundSomething then
-        TeleportService:Teleport(PLACE_ID, LocalPlayer)
+    if not AUTO_HOP or FoundSomething then return end
+
+    local url =
+        "https://games.roblox.com/v1/games/"
+        .. PLACE_ID
+        .. "/servers/Public?sortOrder=Asc&limit=100"
+
+    local success, data = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet(url))
+    end)
+
+    if not success or not data.data then return end
+
+    for _, server in ipairs(data.data) do
+        if not getgenv().CheckedServers[server.id]
+        and server.playing < server.maxPlayers then
+
+            getgenv().CheckedServers[server.id] = true
+
+            TeleportService:TeleportToPlaceInstance(
+                PLACE_ID,
+                server.id,
+                LocalPlayer
+            )
+            return
+        end
     end
 end
 
@@ -148,7 +173,7 @@ task.spawn(function()
 end)
 
 --// ======================================================
---// OPTIONAL: MANUAL JOIN FUNCTION
+--// MANUAL JOIN (OPTIONAL)
 --// ======================================================
 getgenv().JoinServer = function(jobId)
     TeleportService:TeleportToPlaceInstance(
