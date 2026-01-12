@@ -1,5 +1,5 @@
 --// ======================================================
---// BLOX FRUITS EVENT FINDER (FIXED + SMART HOP)
+--// BLOX FRUITS EVENT FINDER (SMART HOP + FULL SERVER AVOID)
 --// ======================================================
 
 --// AUTO EXECUTE ON TELEPORT
@@ -24,8 +24,10 @@ local LocalPlayer = Players.LocalPlayer
 
 --// CONFIG
 local WEBHOOK_URL = "https://discord.com/api/webhooks/1459982301449552015/kjAvqXuGsjwL4WeH8vujJ3tN1AqLFWoB3718qtQhA6HvvuHJ3TmSIlogV-HIMfsfYlKT"
+
 local AUTO_HOP = true
 local HOP_DELAY = 15
+local MIN_FREE_SLOTS = 3 -- avoid full / almost-full servers
 
 local PLACE_ID = game.PlaceId
 local JOB_ID = game.JobId
@@ -135,7 +137,7 @@ Lighting.AttributeChanged:Connect(function(attr)
 end)
 
 --// ======================================================
---// SMART SERVER HOP (NO REJOIN)
+--// SMART SERVER HOP (FULL SERVER AVOID)
 --// ======================================================
 local function hopServer()
     if not AUTO_HOP or FoundSomething then return end
@@ -152,8 +154,11 @@ local function hopServer()
     if not success or not data.data then return end
 
     for _, server in ipairs(data.data) do
-        if not getgenv().CheckedServers[server.id]
-        and server.playing < server.maxPlayers then
+        local freeSlots = server.maxPlayers - server.playing
+
+        if freeSlots >= MIN_FREE_SLOTS
+        and not getgenv().CheckedServers[server.id]
+        and server.id ~= JOB_ID then
 
             getgenv().CheckedServers[server.id] = true
 
