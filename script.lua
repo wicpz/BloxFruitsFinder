@@ -23,7 +23,7 @@ local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 
 --// CONFIG
-local WEBHOOK_URL = "PASTE_YOUR_WEBHOOK_HERE"
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1459982301449552015/kjAvqXuGsjwL4WeH8vujJ3tN1AqLFWoB3718qtQhA6HvvuHJ3TmSIlogV-HIMfsfYlKT"
 local AUTO_HOP = true
 local HOP_DELAY = 15
 
